@@ -1,0 +1,5 @@
+/logs/
+/.idea/
+/node_modules/
+/yarn.lock
+/config.yml
