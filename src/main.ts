@@ -20,6 +20,7 @@ const config = {
 
   // Topic to subscribe to
   topic: yamlConfig.mqtt.topic,
+  others: yamlConfig.mqtt.others,
 
   // TLS configuration
   tls: yamlConfig.mqtt.tls,
@@ -205,6 +206,17 @@ function connectAndSubscribe(): MqttClient {
         logger.info(`Subscribed to topic successfully`);
       }
     });
+    
+    if (config.others) {
+      // Subscribe to all topics using wildcard
+      client.subscribe('#', (err) => {
+        if (err) {
+          logger.error(`Error subscribing to all topics:`, err);
+        } else {
+          logger.info(`Subscribed to all topics successfully`);
+        }
+      });
+    }
   });
 
   // Handle message events
@@ -213,10 +225,22 @@ function connectAndSubscribe(): MqttClient {
       // Parse the message as JSON
       const jsonMessage = JSON.parse(message.toString());
 
+      if (topic != config.topic) {
+        logger.info('Other (' + topic + '): ' + JSON.stringify(jsonMessage));
+        return;
+      }
+
       // Apply message filtering if configured
       if (config.messageFiltering && config.messageFiltering.condition) {
         const { path, value } = config.messageFiltering.condition;
         if (path && getValueByPath(jsonMessage, path) !== value) {
+          if (config.others) {
+            const s = JSON.stringify(jsonMessage);
+            if (s.includes("extrusion_cali_get")) {
+              return;
+            }
+            logger.info('Filtered: ' + s);
+          }
           return;
         }
       }
